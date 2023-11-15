@@ -71,6 +71,7 @@ The package we'll develop in this blog post has this structure:
     - service.yml
 - tests (unit tests for model codel)
 - Dockerfile (instructions for generating a docker image)
+- kind.exe
 - Makefile
 - requirements.txt (list of dependencies)
 - rest_config.yaml (configuration for REST model service)
@@ -86,38 +87,9 @@ All of the code is available in a [github repository.](https://github.com/schmid
 In order to train a regression model, we first need to have a dataset.
 We went into Kaggle and found [a dataset](https://www.kaggle.com/mirichoi0218/insurance) that
 contained insurance charges information. To make it easy to download the
-data, we installed the [kaggle python package](https://pypi.org/project/kaggle/). Then we executed these
-commands to download the data and unzip it into the data folder in the
-project:
+data, we installed the [kaggle python package](https://pypi.org/project/kaggle/). 
 
-```bash
-mkdir -p data
-kaggle datasets download -d mirichoi0218/insurance -p ./data \--unzip
-```
-
-To make it even easier to download the data, we added a Makefile target
-for the commands:
-
-```makefile
-download-dataset: ## download dataset from Kaggle
-    mkdir -p data
-    kaggle datasets download -d mirichoi0218/insurance -p ./data \--unzip
-```
-
-Now all we need to do is execute this command:
-
-```bash
-make download-data
-```
-
-Instead of having to remember how to get the data needed to do modeling,
-I always try to create a repeatable and documented process for creating
-the dataset. We also make sure to never store the dataset in source
-control, so we'll add this line to the .gitignore file:
-
-```
-data/
-```
+We create a folder called data and add into it the insurance csv file we downloaded from Kaggle.
 
 # Training a Regression Model
 
@@ -151,6 +123,14 @@ pandas_profiling documentation it has these capabilities:
 These are the things that we would be looking into to learn more about
 the data set. To use the pandas_profiling package, we'll first load the
 dataset into a pandas dataframe:
+
+In our terminal we would type:
+```bash
+jupyter notebook
+```
+The page that would load into our browser is jupyter notebook where our model and code would be.
+Then we would access the various .ipynb files and run the cells individually.
+
 
 ```python
 import pandas as pd
@@ -675,7 +655,9 @@ y_test = testing_set[target_column]
 We'll load the fitted model object that was saved in a previous step:
 
 ```python
-model = joblib.load("model.joblib")
+model_path = "C:\Users\ralph\regression-model\insurance_charges_model\model_files\1\model.joblib"
+model = joblib.load(model_path)
+
 ```
 
 We can now try to make predictions on the test set with the fitted
@@ -957,14 +939,6 @@ qualified name of the model along with the class path to the model's
 MLModel class. The create_endpoint option is set to true to tell the
 service to create an endpoint for the model.
 
-Using the configuration file, we're able to create an OpenAPI
-specification file for the model service by executing this command:
-
-```bash
-export PYTHONPATH=./
-generate_openapi \--output_file=service_contract.yaml
-```
-
 The
 [service_contract.yaml](https://github.com/schmidtbri/regression-model/blob/master/service_contract.yaml)
 file will be generated and it will contain the specification that was
@@ -978,7 +952,7 @@ were automatically extracted and added to the specification.
 To run the service locally, execute these commands:
 
 ```bash
-uvicorn rest_model_service.main:app \--reload
+uvicorn rest_model_service.main:app --reload
 ```
 
 The service should come up and can be accessed in a web browser at
@@ -1089,116 +1063,38 @@ To stop the docker container, execute this command:
 docker kill $(docker ps -lq)
 ```
 
-## Setting up Digital Ocean
+## Setting up Docker Hub
 
-To show how to deploy the model service we created, we'll use [Digital
-Ocean](https://www.digitalocean.com/). In this section we'll be
-using the doctl command line utility which will help us to interact with
-the Digital Ocean Kubernetes service. We followed [these
-instructions](https://docs.digitalocean.com/reference/doctl/how-to/install/)
-to install the doctl utility. Before we can do anything with the Digital
-Ocean API, we need to authenticate, so we created an API token by
-following these instructions. Once we have the token we can add it to
-the doctl utility by creating a new authentication context with this
-command:
+To illustrate the deployment of the model service using Docker Hub, we'll leverage Docker Hub, a popular container image registry. In this section, we'll guide you through the process of preparing and pushing your containerized application.
+
+Log in to Docker Hub using the following command:
 
 ```bash
-doctl auth init \--context model-services-context
+docker login
 ```
+Followed by entering the Docker Hub credentials
 
-The command creates a new context called "model-services-context" that
-we'll use to interact with the Digital Ocean API. The command asks for
-the API token we generated and saves it into the configuration file of
-the tool. To make sure that the context was created correctly and is the
-current context, execute this command:
+We then tag the docker image called 'insurance_charges_model:0.1.0' to our docker hub repository
 
 ```bash
-doctl auth list
+docker tag insurance_charges_model:0.1.0 eixsayy/insurance_charges_model:0.1.0
 ```
 
-If the context we created is not the current context, we can switch to
-it with this command:
+We then push the tagged image to docker Hub
 
 ```bash
-doctl auth switch \--context model-services-context
+docker push eixsayy/insurance_charges_model:0.1.0
 ```
-
-To make sure that we are working in the right account, execute this
-command:
-
-```bash
-doctl account get
-```
-
-The account details should match the account that you used to login. Now
-that we are connecting to the right account in DO, we'll work on
-uploading the docker image that contains the model service so that we
-can use it in the Kubernetes cluster. First, we'll create a container
-registry with this command:
-
-```bash
-doctl registry create model-services-registry \--subscription-tier basic
-```
-
-We called the new registry "model-services-registry" and we used the
-basic tier, which costs \$5 a month.
-
-### Pushing the Image
-
-Now that we have a registry, we need to add credentials to our local
-docker daemon in order to be able to upload images, to do that we'll use
-this command:
-
-```bash
-doctl registry login
-```
-
-In order to upload the image, we need to tag it with the URL of the DO
-registry we created. The docker tag command looks like this:
-
-```bash
-docker tag insurance_charges_model:0.1.0
-registry.digitalocean.com/model-services-registry/insurance_charges_model:0.1.0
-```
-
-Now we can push the image to the DO registry:
-
-```bash
-docker push registry.digitalocean.com/model-services-registry/insurance_charges_model:0.1.0
-```
+![Prediction Result](blog_post\dockerhub.png){ width=100% }
 
 ### Creating the Kubernetes Cluster
-
-The doctl tool provides an option for creating a Kubernetes cluster, the
-command goes like this:
+We install Kind and kubectl, and add the path of kind to our system variables and then we execute the following command while in the kind directory:
 
 ```bash
-doctl kubernetes cluster create model-services-cluster
+.\kind.exe create cluster --name my-k8s-cluster
 ```
 
-The cluster should come up after a while. The default cluster size is 3
-nodes which should cost about \$30 to run for a month. We'll shut the
-cluster down later to save money.
-
-Next, we need to add Kubernetes integration with Digital Ocean's docker
-registry, this allows the kubernetes cluster to pull images from the
-docker registry we created above. To do this execute this command:
-
-```bash
-doctl kubernetes cluster registry add model-services-cluster
-```
-
-To access the cluster, doctl has another option that will set up the
-kubectl tool for us:
-
-```bash
-doctl kubernetes cluster kubeconfig save 85866655-708d-47a9-8797-bcca56a10401
-```
-
-The unique identifier is for the cluster that was just created and is
-returned by the previous command. When the command finishes, the current
-context in kubectl should be switched to the newly created cluster. To
-list the contexts in kubectl, execute this command:
+To list the contexts in kubectl, execute this command:
 
 ```bash
 kubectl config get-contexts
@@ -1370,7 +1266,8 @@ contact the service. To view details about the load balancer provided by
 Digital Ocean for this Service, we'll execute this command:
 
 ```bash
-kubectl describe service insurance-charges-model-service | grep "LoadBalancer Ingress"
+kubectl describe service insurance-charges-model-service | Select-String "LoadBalancer Ingress"
+
 ```
 
 The load balancer can take a while longer than the service to come up,
@@ -1388,17 +1285,18 @@ We'll try the same curl command as before to see if the model is
 reachable:
 
 ```bash
-curl -X 'POST' 'http://143.244.214.226/api/models/insurance_charges_model/prediction' \
--H 'accept: application/json' \
--H 'Content-Type: application/json' \
--d '{
-"age": 65,
-"sex": "male",
-"bmi": 50,
-"children": 5,
-"smoker": true,
-"region": "southwest"
+Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/models/insurance_charges_model/prediction' -Method Post -Headers @{
+  'accept' = 'application/json'
+  'Content-Type' = 'application/json'
+ -Body '{
+  "age": 65,
+  "sex": "male",
+  "bmi": 50,
+  "children": 5,
+  "smoker": true,
+  "region": "southwest"
 }'
+
 ```
 
 A prediction was returned from the model:
@@ -1406,27 +1304,42 @@ A prediction was returned from the model:
 ```
 {"charges":46277.67}
 ```
-
-# Deleting the Resources
-
-Now that we're done with the service we need to destroy the resources.
-To destroy the load balancer, execute this command:
+For integration with logging, the following commands need to be executed:
 
 ```bash
-doctl compute load-balancer delete \--force $(kubectl get svc insurance-charges-model-service -o jsonpath="{.metadata.annotations.kubernetes\.digitalocean\.com/load-balancer-id}")
+Update of setup.py
+git clone https://github.com/schmidtbri/logging-for-ml-models
+pip install .
 ```
 
-To destroy the kubernetes cluster, execute this command:
+The following is an attempt at adding the logging code into the regression model, all files created are still preserved.
+<!-- push and pull to docker hub
+kubectl get pods -n model-services
+kubectl get pods -n model-services insurance-charges-model-deployment-dcbf6b44c-m4z6s -o jsonpath='{.spec.containers[*].name}'
+kubectl logs -n model-services insurance-charges-model-deployment-dcbf6b44c-m4z6s -c insurance-charges-model
+kubectl create -f https://download.elastic.co/downloads/eck/2.7.0/crds.yaml
+kubectl apply -f https://download.elastic.co/downloads/eck/2.7.0/operator.yaml
+kubectl apply -n elastic-system -f kubernetes\elastic_search.yml  ##creation of file elastic_search under kubernetes
+kubectl get elasticsearch -n elastic-system
+kubectl get pods -n elastic-system --selector='elasticsearch.k8s.elastic.co/cluster-name=quickstart'
+kubectl get service quickstart-es-http -n elastic-system
+kubectl get secret quickstart-es-elastic-user -n elastic-system -o jsonpath='{.data.elastic}' | ForEach-Object { [System.Text.Encoding]::Utf8.GetString([Convert]::FromBase64String($_)) }
+kubectl apply -n elastic-system -f kubernetes\kibana.yaml
+kubectl get kibana -n elastic-system
+kubectl get pod -n elastic-system --selector='kibana.k8s.elastic.co/name=quickstart'
+kubectl get service quickstart-kb-http -n elastic-system
+ubectl port-forward service/quickstart-kb-http 5601 -n elastic-system
+Use https://localhost:5601 to open Kibana
+Username: elastic 
+Password: a3qj724t07y5KKj4K6QM9hGb -->
 
 ```bash
-doctl k8s cluster delete 85866655-708d-47a9-8797-bcca56a10401
+Create file called filebeat.yml
+kubectl apply -n elastic-system -f kubernetes\filebeat.yml
+kubectl get beat -n elastic-system 
+kubectl get pods -n elastic-system --selector='beat.k8s.elastic.co/name=quickstart'
 ```
 
-To destroy the docker registry, execute this command:
-
-```bash
-doctl registry delete model-services-registry
-```
 
 # Closing
 

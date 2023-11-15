@@ -6,7 +6,7 @@ This code is used in this [blog post](https://www.tekhnoal.com/regression-model.
 
 ## Requirements
 
-Python 3
+Python 3.8.0
 
 ## Installation 
 
@@ -24,36 +24,12 @@ Then create a virtual environment and activate it:
 # go into the project directory
 cd regression-model
 
-make venv
-
-source venv/bin/activate
-```
+# creation et activation d'un environement virtuel
+.\venv\scripts\activate
 
 Install the dependencies:
 
-```bash
-make dependencies
-```
-
-The requirements.txt file only includes the dependencies needed to make predictions with the model. To train the model you'll need to install the dependencies from the train_requirements.txt file:
-
-```bash
-make train-dependencies
-```
-
-## Running the Unit Tests
-To run the unit test suite execute these commands:
-
-```bash
-# first install the test dependencies
-make test-dependencies
-
-# run the test suite
-make test
-
-# clean up the unit tests
-make clean-test
-```
+pip install -r requirements.txt
 
 ## Running the Service
 
@@ -61,15 +37,6 @@ To start the service locally, execute these commands:
 
 ```bash
 uvicorn rest_model_service.main:app --reload
-```
-
-## Generating an OpenAPI Specification
-
-To generate the OpenAPI spec file for the REST service that hosts the model, execute these commands:
-
-```bash
-export PYTHONPATH=./
-generate_openapi --output_file=service_contract.yaml
 ```
 
 ## Docker

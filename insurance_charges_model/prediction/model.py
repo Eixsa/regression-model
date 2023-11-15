@@ -2,14 +2,20 @@ import os
 import joblib
 import pandas as pd
 from ml_base import MLModel
-
+from typing import List, Optional
+from ml_base.decorator import MLModelDecorator
+from ml_base.ml_model import MLModelSchemaValidationException
 from insurance_charges_model import __version__
 from insurance_charges_model.prediction.schemas import InsuranceChargesModelInput, \
     InsuranceChargesModelOutput
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from ml_base.decorators import LoggingDecorator
+from time import time
+import json  # Import json module for serialization
 
-
+@LoggingDecorator  # Add this line
 class InsuranceChargesModel(MLModel):
-    """Prediction functionality of th Insurance Charges Model."""
+    """Prediction functionality of the Insurance Charges Model."""
 
     @property
     def display_name(self) -> str:
@@ -51,14 +57,14 @@ class InsuranceChargesModel(MLModel):
         dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         with open(os.path.join(dir_path, "model_files", "1", "model.joblib"), 'rb') as file:
             self._svm_model = joblib.load(file)
+            self._logger = None
 
     def predict(self, data: InsuranceChargesModelInput) -> InsuranceChargesModelOutput:
-        """Make a prediction with the model.
+        if self._logger is None:
+            self._logger = logging.getLogger("{}_{}".format(self.qualified_name, "logger"))
 
-        :param data: Data for making a prediction with the model. Object must meet requirements of the input schema.
-        :rtype: dict -- The result of the prediction, the output object will meet the requirements of the output schema.
+        """Make a prediction with the model."""
 
-        """
         # converting the incoming dictionary into a pandas dataframe that can be accepted by the model
         X = pd.DataFrame([[data.age, data.sex.value, data.bmi, data.children, data.smoker, data.region.value]],
                          columns=["age", "sex", "bmi", "children", "smoker", "region"])
