@@ -9,11 +9,10 @@ from insurance_charges_model import __version__
 from insurance_charges_model.prediction.schemas import InsuranceChargesModelInput, \
     InsuranceChargesModelOutput
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from ml_base.decorators import LoggingDecorator
 from time import time
 import json  # Import json module for serialization
 
-@LoggingDecorator  # Add this line
+
 class InsuranceChargesModel(MLModel):
     """Prediction functionality of the Insurance Charges Model."""
 
@@ -57,11 +56,10 @@ class InsuranceChargesModel(MLModel):
         dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         with open(os.path.join(dir_path, "model_files", "1", "model.joblib"), 'rb') as file:
             self._svm_model = joblib.load(file)
-            self._logger = None
+            
 
     def predict(self, data: InsuranceChargesModelInput) -> InsuranceChargesModelOutput:
-        if self._logger is None:
-            self._logger = logging.getLogger("{}_{}".format(self.qualified_name, "logger"))
+        
 
         """Make a prediction with the model."""
 

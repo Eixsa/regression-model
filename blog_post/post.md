@@ -983,46 +983,20 @@ it somewhere. To do this, we'll use docker and kubernetes.
 
 ## Creating a Docker Image
 
-Before moving forward, let's create a docker image and run it locally.
-The docker image is generated using instructions in the
-[Dockerfile](https://github.com/schmidtbri/regression-model/blob/master/Dockerfile):
-
-```dockerfile
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.7
-
-MAINTAINER Brian Schmidt
-"6666331+schmidtbri@users.noreply.github.com"
-
-WORKDIR ./service
-
-COPY ./insurance_charges_model ./insurance_charges_model
-COPY ./rest_config.yaml ./rest_config.yaml
-COPY ./service_requirements.txt ./service_requirements.txt
-
-RUN pip install -r service_requirements.txt
-
-ENV APP_MODULE=rest_model_service.main:app
+```bash
+docker login
 ```
-
-The Dockerfile is used by this command to create the docker image:
 
 ```bash
-docker build -t insurance_charges_model:0.1.0 .
+# Build the Docker image
+docker build -t eixsayy/finaltest:latest .
+
+# Push the Docker image to Docker Hub (replace with your Docker Hub username)
+
+docker push eixsayy/finaltest:latest
+
 ```
-
-To make sure everything worked as expected, we'll look through the
-docker images in our system:
-
-```bash
-docker image ls
-```
-
-The insurance_charges_model image should be listed. Next, we'll start
-the image to see if everything is working as expected:
-
-```bash
-docker run -d -p 80:80 insurance_charges_model:0.1.0
-```
+ ![Alt Text](blog_post\docker.png)
 
 The service should be accessible on port 80 of localhost, so we'll try
 to make a prediction using the curl command:
@@ -1063,29 +1037,6 @@ To stop the docker container, execute this command:
 docker kill $(docker ps -lq)
 ```
 
-## Setting up Docker Hub
-
-To illustrate the deployment of the model service using Docker Hub, we'll leverage Docker Hub, a popular container image registry. In this section, we'll guide you through the process of preparing and pushing your containerized application.
-
-Log in to Docker Hub using the following command:
-
-```bash
-docker login
-```
-Followed by entering the Docker Hub credentials
-
-We then tag the docker image called 'insurance_charges_model:0.1.0' to our docker hub repository
-
-```bash
-docker tag insurance_charges_model:0.1.0 eixsayy/insurance_charges_model:0.1.0
-```
-
-We then push the tagged image to docker Hub
-
-```bash
-docker push eixsayy/insurance_charges_model:0.1.0
-```
-![Prediction Result](blog_post\dockerhub.png){ width=100% }
 
 ### Creating the Kubernetes Cluster
 We install Kind and kubectl, and add the path of kind to our system variables and then we execute the following command while in the kind directory:
@@ -1173,7 +1124,7 @@ spec:
     spec:
       containers:
         - name: insurance-charges-model
-          image: registry.digitalocean.com/model-services-registry/insurance_charges_model:0.1.0
+          image: eixsayy/finaltest:latest
           ports:
           - containerPort: 80
             protocol: TCP
@@ -1181,6 +1132,11 @@ spec:
           resources:
             requests:
               cpu: "250m"
+          env:  
+            - name: LOG_LEVEL
+              value: "info"  
+            - name: LOG_FORMAT
+              value: "json"  
 ```
 
 The file containing the YAML is
@@ -1235,12 +1191,12 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    app: insurance-charges-model
+    app: my-app
   ports:
     - name: http
       protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: 8000
 ```
 
 The YAML file is
@@ -1280,6 +1236,9 @@ hit the IP address with a web browser:
 
 We can access the service documentation through the load balancer and
 the Pod that is running the REST service is returning the webpage.
+```bash
+http://localhost:8000
+```
 
 We'll try the same curl command as before to see if the model is
 reachable:
@@ -1288,7 +1247,7 @@ reachable:
 Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/models/insurance_charges_model/prediction' -Method Post -Headers @{
   'accept' = 'application/json'
   'Content-Type' = 'application/json'
- -Body '{
+} -Body '{
   "age": 65,
   "sex": "male",
   "bmi": 50,
@@ -1296,6 +1255,7 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/models/insurance_charges_model
   "smoker": true,
   "region": "southwest"
 }'
+
 
 ```
 
@@ -1311,6 +1271,14 @@ Update of setup.py
 git clone https://github.com/schmidtbri/logging-for-ml-models
 pip install .
 ```
+![Prediction Result](blog_post/proof_terminal.png)
+![Prediction Result](blog_post\proof_terminal2.png){ width=100% }
+![Prediction Result](blog_post\proof_terminal3.png){ width=100% }
+![Prediction Result](blog_post\proof_localhost.png){ width=100% }
+![Prediction Result](blog_post\jupyter.png){ width=100% }
+![Prediction Result](blog_post\uvicorn.png){ width=100% }
+![Prediction Result](blog_post\charges_proof.png){ width=100% }
+
 
 The following is an attempt at adding the logging code into the regression model, all files created are still preserved.
 <!-- push and pull to docker hub

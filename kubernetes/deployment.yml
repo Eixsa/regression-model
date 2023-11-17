@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: insurance-charges-model
-          image: eixsayy/my-fastapi-repo:latest
+          image: eixsayy/finaltest:latest
           ports:
           - containerPort: 80
             protocol: TCP
